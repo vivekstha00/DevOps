@@ -50,16 +50,25 @@ jobs:
       - name: Run tests
         run: php artisan test
 
-      - name: Send success message to webhook
+      - name: Notify success
         if: success()
+        env:
+         GOOGLE_CHAT_WEBHOOK: ${{ secrets.WEBHOOK_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"✅ Laravel CI pipeline succeeded!"}' \
-          ${{ secrets.WEBHOOK_URL }}
-
-      - name: Send error message to webhook
+         curl -X POST \
+         -H "Content-Type: application/json" \
+         -d '{
+            "text": "✅ *Laravel CI Pipeline PASSED* ✅\n\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Commit Message:* ${{ github.event.head_commit.message }}\n*Author:* ${{ github.actor }}\n*Workflow:* ${{ github.workflow }}\n*Run ID:* ${{ github.run_id }}\n\n🎉 All tests passed successfully!"
+         }' \
+         "$GOOGLE_CHAT_WEBHOOK"
+      - name: Notify failure
         if: failure()
+        env:
+          GOOGLE_CHAT_WEBHOOK: ${{ secrets.WEBHOOK_URL }}
         run: |
-          curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"❌ Laravel CI pipeline failed!"}' \
-          ${{ secrets.WEBHOOK_URL }}
+          curl -X POST \
+          -H "Content-Type: application/json" \
+          -d '{
+            "text": "❌ *Laravel CI Pipeline FAILED* ❌\n\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}\n*Commit Message:* ${{ github.event.head_commit.message }}\n*Author:* ${{ github.actor }}\n*Workflow:* ${{ github.workflow }}\n*Run ID:* ${{ github.run_id }}\n\n💥 Pipeline failed. Please check the logs for details.\n\n[View Run Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          }' \
+          "$GOOGLE_CHAT_WEBHOOK"
